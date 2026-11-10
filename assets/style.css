@@ -49,3 +49,43 @@
 .rob-formula code{background:#f0f5f6;padding:1px 5px;border-radius:4px}
 @media(max-width:1050px){.rob-metrics{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.topbar2{flex-direction:column;align-items:flex-start}.tb-right{flex-wrap:wrap}.hello-row{flex-direction:column;align-items:flex-start}.station-card{width:100%}.rob-levels{grid-template-columns:1fr}}
+
+/* ===== Peta interaktif ===== */
+.map-wrap{position:relative;margin-top:14px;border-radius:11px;overflow:hidden;border:1px solid var(--line)}
+.map-live{position:relative;z-index:0;height:340px;width:100%;background:#e9f2ef}
+.map-tools{position:absolute;top:10px;right:10px;z-index:5;display:flex;gap:6px}
+.map-tools .btn{font-size:10px;padding:8px 11px;box-shadow:0 2px 8px #0b3a4426}
+.map-dot{display:inline-block;width:22px;height:22px;border-radius:50%;border:4px solid #ffffffcc;box-shadow:0 3px 10px #0b3a4455;vertical-align:middle}
+.map-dot.tsense{background:#138f9c}.map-dot.tide{background:#1e5ac8}
+.map-legend{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;font-size:10px;color:#6f8791;margin-top:10px}
+.map-legend .map-dot{width:12px;height:12px;border-width:2px;margin-right:6px}
+.map-fallback{display:grid;place-items:center;height:100%;padding:20px;text-align:center;font-size:12px;color:#8a5a1c;background:#fff6e5}
+/* ===== Visual air ===== */
+.wv-card{border:1px solid var(--line);border-radius:14px;padding:20px;background:#fff;margin-bottom:18px}
+.wv-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.wv-head b{display:block;font-size:17px}
+.wv-head small{display:block;font-size:11px;color:var(--muted);margin-top:5px}
+.wv-big{display:flex;align-items:baseline;gap:6px;margin:22px 0 6px}
+.wv-big strong{font-size:clamp(48px,8vw,68px);letter-spacing:-3px;line-height:1;color:var(--navy)}
+.wv-big small{font-size:14px;color:#80939c}
+.wv-delta{font-size:12px;color:var(--muted);margin-bottom:16px}
+.wv-delta b{color:var(--teal);margin-right:6px}
+.water-visual{position:relative;height:230px;border-radius:12px;overflow:hidden;background:linear-gradient(180deg,#f6fbfb,#e6f2f3);border:1px solid #e1ecee}
+.wv-sensor{position:absolute;top:10px;left:50%;width:34px;height:26px;margin-left:-17px;border-radius:7px;background:#183341;box-shadow:0 3px 8px #0b3a4440}
+.wv-sensor:after{content:"";position:absolute;bottom:-5px;left:50%;margin-left:-8px;width:16px;height:6px;border-radius:0 0 8px 8px;background:#2b4d5d}
+.wv-tag{position:absolute;z-index:3;font:600 9px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:1.6px;color:#6f8791}
+.wv-tag.sensor{top:17px;left:calc(50% + 28px)}
+.wv-tag.surface{right:14px;bottom:12px;color:#e9fbfb}
+.wv-line{position:absolute;z-index:2;left:50%;top:44px;height:76px;border-left:2px dashed #159eae;transition:height 1s linear}
+.wv-dist{position:absolute;left:10px;top:50%;transform:translateY(-50%);background:#ffffffe6;border-radius:6px;padding:3px 8px;font:600 10px ui-monospace,Consolas,monospace;color:#138d9c;white-space:nowrap}
+.wv-water{position:absolute;left:0;right:0;bottom:0;top:120px;transition:top 1s linear}
+.wv-wave{position:absolute;left:0;width:200%;height:28px;top:-14px;fill:#5fcfd0;animation:wvMove 6s linear infinite reverse}
+.wv-wave.back{top:-19px;fill:#a8e6e2;opacity:.8;animation:wvMove 9s linear infinite}
+@keyframes wvMove{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.wv-body{position:absolute;inset:0;overflow:hidden;background:linear-gradient(180deg,#5fcfd0 0%,#2fb0b9 38%,#1a8a9b 100%)}
+.wv-body:before{content:"";position:absolute;left:-20%;right:-20%;top:0;height:46%;background:linear-gradient(180deg,#ffffff38,transparent)}
+.wv-bubble{position:absolute;bottom:-10px;width:6px;height:6px;border-radius:50%;background:#ffffff66;animation:wvRise 5s ease-in infinite}
+@keyframes wvRise{0%{transform:translateY(0);opacity:0}15%{opacity:.8}100%{transform:translateY(-110px);opacity:0}}
+.wv-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:10px;color:#85969e;margin-top:14px}
+@media(prefers-reduced-motion:reduce){.wv-wave,.wv-bubble{animation:none}.wv-line,.wv-water{transition:none}}
+@media(max-width:700px){.map-live{height:280px}.map-tools{flex-direction:column;align-items:flex-end}.wv-card{padding:16px}}
