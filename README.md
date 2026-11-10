@@ -1,38 +1,68 @@
-# T-SENSE by OCEANOVA — GitHub Pages Dashboard
+# T-SENSE by OCEANOVA — Firebase Login Dashboard
 
-Dashboard frontend statis untuk prototipe T-SENSE.
+Dashboard frontend statis untuk GitHub Pages dengan:
+- Login email/password (alamat Gmail boleh digunakan)
+- Registrasi akun dan verifikasi email
+- Google Sign-In
+- Reset password
+- Proteksi tampilan dashboard berdasarkan status login
+- Preview GNSS, grafik jarak sensor, indikator rob belum dikalibrasi, diagnostics, tabel dan ekspor CSV/TXT/GeoJSON
 
-## Isi fitur
-- Halaman login dan pendaftaran akun demo.
-- GNSS: latitude, longitude, jumlah satelit, dan status fix contoh.
-- Pemantauan jarak sensor A01NYUB ke permukaan air dengan grafik demo per detik.
-- Pilihan tampilan periode detik/jam/hari.
-- Panel indikator potensi banjir rob dengan status belum dikalibrasi.
-- Diagnostics, riwayat data, serta ekspor CSV, TXT, dan GeoJSON.
-- Tema gelap dan tata letak responsif.
+## A. Konfigurasi Firebase
 
-## Cara menjalankan
-Buka `index.html` di browser, atau unggah seluruh isi folder ini ke root repository GitHub Pages.
+1. Buka Firebase Console dan pilih project T-SENSE.
+2. Authentication → Sign-in method / Sign-in providers:
+   - Aktifkan Email/Password.
+   - Aktifkan Google dan pilih support email.
+3. Authentication → Settings → Authorized domains:
+   - Tambahkan `USERNAME.github.io` (tanpa https:// dan tanpa path repository).
+   - Tambahkan `localhost` untuk pengujian lokal jika belum ada.
+4. Project settings → Your apps → pilih aplikasi Web → SDK setup and configuration → Config.
+5. Buka `assets/firebase-config.js` dan ganti semua nilai `PASTE_...` dengan konfigurasi Firebase milikmu.
 
-## Publikasi GitHub Pages
-1. Buat repository GitHub, misalnya `tsense-oceanova`.
-2. Unggah `index.html`, folder `assets`, dan `README.md` ke root repository.
-3. Buka Settings → Pages.
-4. Pilih Deploy from a branch → `main` → `/(root)` → Save.
-5. Buka alamat `https://USERNAME.github.io/tsense-oceanova/`.
+Contoh bentuk (gunakan nilai dari project milikmu, jangan gunakan contoh literal):
+```js
+export const firebaseConfig = {
+  apiKey: "nilai-dari-firebase",
+  authDomain: "project-id.firebaseapp.com",
+  projectId: "project-id",
+  storageBucket: "nilai-dari-firebase",
+  messagingSenderId: "nilai-dari-firebase",
+  appId: "nilai-dari-firebase"
+};
+```
 
-## PENTING: login demo bukan autentikasi produksi
-Karena GitHub Pages hanya menyajikan file statis, pendaftaran/login dalam ZIP ini hanya simulasi lokal:
-- Akun disimpan di `localStorage` browser yang sama.
-- Sesi disimpan di `sessionStorage`.
-- Password demo disimpan sebagai teks biasa di browser. Jangan gunakan password asli atau password yang dipakai pada akun lain.
-- Akun tidak tersinkron antarperangkat/browser dan tidak aman untuk penggunaan publik.
+Firebase Web API key bukan password akun. Jangan pernah menaruh password Gmail, service-account private key, atau credential server di website. Atur Security Rules sebelum menyimpan data pengguna/perangkat.
 
-Untuk login Gmail/email + password yang sesungguhnya, integrasikan layanan autentikasi seperti Supabase Auth atau Firebase Authentication. Jangan menyimpan password pengguna sendiri di frontend.
+## B. Jalankan lokal
 
-## Data alat
-Semua koordinat, jumlah satelit, jarak, grafik, dan status diagnostik yang tampil saat ini adalah DATA SIMULASI. Koordinat hanya contoh sekitar Palembang, bukan lokasi alat. Dashboard ini belum menerima POST dari ESP32 dan tidak memiliki backend/database.
-Untuk menghubungkan ESP32, siapkan API/backend dan database terpisah. Jangan menaruh API secret, password Wi-Fi, token ThingSpeak, atau kunci privat di repository publik.
+Jangan membuka `index.html` langsung dengan `file://`. Jalankan server lokal, misalnya:
+- VS Code: install extension Live Server, klik kanan `index.html` → Open with Live Server.
+- Atau di terminal folder proyek jalankan `python -m http.server 5500`, lalu buka `http://localhost:5500`.
 
-## Kalibrasi dan indikator rob
-Dashboard tidak menetapkan status aman/waspada/bahaya. Tentukan elevasi referensi sensor, datum vertikal, ambang lokal berdasarkan data pasang surut, dan validasi lapangan sebelum mengaktifkan interpretasi risiko. GNSS NEO-M8N standar bukan penerima RTK presisi sentimeter.
+Untuk Firebase Authentication, `localhost` harus terdaftar di Authorized domains.
+
+## C. Upload ke GitHub Pages
+
+1. Upload isi folder ini ke root repository GitHub (index.html harus di root).
+2. Repository → Settings → Pages.
+3. Build and deployment → Deploy from a branch.
+4. Branch `main`, folder `/(root)`, lalu Save.
+5. Tambahkan domain `USERNAME.github.io` ke Firebase Authorized domains.
+
+## D. Batasan versi ini — penting
+
+- Grafik, GNSS, koordinat, jumlah satelit, dan jarak sensor saat ini adalah **SIMULASI** untuk demonstrasi antarmuka. Bukan data dari ESP32/A01NYUB/NEO-M8N.
+- Data rekaman hanya tersimpan sementara di memori browser; refresh halaman menghapusnya.
+- Grafik per jam/hari merangkum sampel yang tersedia pada sesi browser, bukan arsip historis sungguhan.
+- Ekspor CSV, TXT, GeoJSON tersedia; CSV dapat dibuka dengan Excel.
+- Belum ada integrasi ESP32, database cloud, atau penyimpanan historis. Untuk menerima telemetry perangkat diperlukan backend/API atau Firebase Realtime Database/Firestore beserta Authentication dan Security Rules.
+- Indikator banjir rob sengaja belum memberikan label aman/waspada/bahaya. Kalibrasi elevasi referensi, datum, ambang lokal dan validasi lapangan wajib dilakukan terlebih dahulu.
+- NEO-M8N adalah GNSS standar, bukan receiver RTK centimeter-level.
+
+## E. Jika login gagal
+
+- `auth/unauthorized-domain`: tambahkan domain website pada Authentication → Settings → Authorized domains.
+- `auth/operation-not-allowed`: aktifkan provider yang sesuai pada Sign-in method.
+- Google popup error: pastikan Google provider aktif dan Support email sudah dipilih.
+- Pastikan `firebase-config.js` tidak lagi berisi nilai placeholder.
