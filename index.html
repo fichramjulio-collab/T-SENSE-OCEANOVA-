@@ -62,14 +62,26 @@
       <div class="side-bottom"><div class="online-dot"></div><span>Dashboard preview mode</span></div>
     </aside>
     <main class="main-content" id="overview">
-      <header class="topbar">
-        <div><div class="eyebrow">COASTAL MONITORING SYSTEM</div><h1>T-SENSE <span>Dashboard</span></h1></div>
-        <div class="top-actions"><span class="demo-pill"><b></b> SIMULATION</span><div class="user-chip"><div class="avatar" id="userAvatar">O</div><div><b id="userName">Operator</b><small id="userEmail">operator@gmail.com</small></div></div><button id="logoutButton" class="btn outline small-btn">Keluar</button></div>
+      <header class="topbar2">
+        <div>
+          <div class="crumb">OCEANOVA <i>/</i> T-SENSE</div>
+          <h1>Coastal Monitoring Dashboard</h1>
+        </div>
+        <div class="tb-right">
+          <span class="sim-pill"><b></b> SIMULATION MODE</span>
+          <span class="tb-clock" id="clock">--.--.-- WIB</span>
+          <button id="logoutButton" class="btn outline small-btn">Keluar</button>
+        </div>
       </header>
-      <section class="welcome-row">
-        <div><h2>Situational overview</h2><p class="muted">Pemantauan muka air laut dan posisi stasiun pesisir secara terpadu.</p></div>
-        <div class="clock-box"><small>WAKTU PEMANTAUAN</small><b id="clock">--:--:-- WIB</b><span id="dateLabel">Memuat tanggal…</span></div>
+      <section class="hello-row">
+        <div>
+          <div class="crumb">T-SENSE · COASTAL EARLY INDICATION</div>
+          <h2 class="hello">Halo, <span id="userName">Operator</span><em>✦</em></h2>
+          <p class="muted">Pantau perubahan muka air laut dan status perangkat dalam satu tampilan.</p>
+        </div>
+        <div class="station-card"><span class="st-icon">⌖</span><div><small>STATION ID</small><b>T-SENSE-001</b></div><i class="st-dot"></i></div>
       </section>
+      <div class="sim-notice"><b>ⓘ Data simulasi:</b> angka, koordinat, grafik, dan status perangkat pada halaman ini merupakan contoh antarmuka, bukan pengukuran langsung dari alat. Ambang rob dan elevasi muka air belum dikalibrasi.</div>
       <section class="stat-grid">
         <article class="stat-card"><div class="stat-top"><span>JARAK SENSOR KE AIR</span><span class="stat-icon">↕</span></div><strong id="distanceValue">-- <small>cm</small></strong><p><span class="tiny-dot blue"></span> A01NYUB · pembacaan contoh</p></article>
         <article class="stat-card"><div class="stat-top"><span>PERUBAHAN RELATIF</span><span class="stat-icon">⌁</span></div><strong id="changeValue">-- <small>cm</small></strong><p>Terhadap pembacaan awal simulasi</p></article>
@@ -108,8 +120,33 @@
   <div class="chart-wrap"><canvas id="tideChart"></canvas></div>
 </section>
       <section class="panel" id="risk">
-        <div class="panel-heading"><div><div class="eyebrow">COASTAL EARLY INDICATION</div><h2>Indikator potensi banjir rob</h2></div><span class="tag warning">BELUM DIKALIBRASI</span></div>
-        <div class="risk-content"><div class="risk-gauge"><div class="gauge-inner"><span>STATUS</span><b>—</b><small>Belum tersedia</small></div></div><div class="risk-copy"><h3>Ambang bahaya belum ditetapkan</h3><p>Dashboard belum dapat menyimpulkan kondisi aman, waspada, atau bahaya. Diperlukan elevasi referensi sensor, datum vertikal, ambang muka air lokal, dan validasi lapangan.</p><ul><li>Ukur elevasi pemasangan sensor terhadap benchmark.</li><li>Tetapkan ambang berdasarkan data pasang surut dan kejadian rob setempat.</li><li>Validasi hasil pengukuran sebelum mengaktifkan klasifikasi risiko.</li></ul></div></div>
+        <div class="panel-heading">
+          <div><div class="eyebrow">COASTAL EARLY INDICATION</div><h2>Indikator potensi banjir rob</h2><p class="muted">Status dari elevasi muka air, jarak ke ambang lokal, dan laju perubahan</p></div>
+          <span class="tag warning" id="robCalTag">BELUM DIKALIBRASI</span>
+        </div>
+        <div class="rob-levels">
+          <div class="rob-level" data-level="0"><i></i><b>NORMAL</b><small>Muka air masih jauh di bawah ambang lokal</small></div>
+          <div class="rob-level" data-level="1"><i></i><b>WASPADA</b><small>Muka air mendekati ambang atau naik cepat</small></div>
+          <div class="rob-level" data-level="2"><i></i><b>SIAGA</b><small>Muka air sangat dekat atau melewati ambang</small></div>
+        </div>
+        <div class="rob-metrics">
+          <div class="coord-card"><span>ELEVASI MUKA AIR (Z)</span><b id="robZ">-- m</b></div>
+          <div class="coord-card"><span>JARAK KE AMBANG</span><b id="robMargin">-- cm</b></div>
+          <div class="coord-card"><span>LAJU PERUBAHAN (R)</span><b id="robRate">-- m/jam</b></div>
+          <div class="coord-card"><span>KUALITAS DATA</span><b id="robQuality">--</b></div>
+        </div>
+        <p class="rob-note" id="robNote">Mengumpulkan data epoch pertama…</p>
+        <div class="rob-sim">
+          <span class="muted" style="font-size:10px">Uji skenario simulasi:</span>
+          <button class="btn outline" id="robFall">Normal / air surut</button>
+          <button class="btn outline" id="robRise">▲ Air naik</button>
+        </div>
+        <details class="rob-formula">
+          <summary>Rumus dan aturan status</summary>
+          <p><code>Z_air(t) = Z_acuan − d(t)</code>, dengan d jarak vertikal terkoreksi dari titik acuan ke permukaan air (median sampel valid per epoch).</p>
+          <p><code>R = (Z_t − Z_(t−1)) / Δt</code> dalam m/jam, Δt dari stempel waktu aktual. Positif naik, negatif turun. R tidak dihitung bila epoch sebelumnya tidak valid atau Δt tidak sah.</p>
+          <p>Status ditentukan dari jarak ke ambang lokal (ambang − Z), dan dinaikkan satu tingkat bila R melebihi batas laju cepat saat sudah dekat ambang. Naik status memerlukan beberapa epoch berturut-turut; turun status memakai histeresis. Semua ambang adalah parameter yang wajib dikalibrasi dengan data dan pengukuran lokal (<code>assets/rob-config.json</code>).</p>
+        </details>
       </section>
       <section class="panel" id="diagnostics">
         <div class="panel-heading"><div><div class="eyebrow">HARDWARE HEALTH</div><h2>Device diagnostics</h2></div><span class="tag">STATUS DEMO</span></div>

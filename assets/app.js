@@ -5,6 +5,7 @@ import {
   sendPasswordResetEmail, onAuthStateChanged, signOut, updateProfile
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
+import { loadRobConfig, createRobEngine, parametersReady } from "./rob.js";
 
 const authScreen = document.getElementById("authScreen");
 const dashboard = document.getElementById("dashboard");
@@ -124,9 +125,8 @@ if (auth) onAuthStateChanged(auth, user => {
   if (user) {
     authScreen.classList.add("hidden");
     dashboard.classList.remove("hidden");
-    document.getElementById("userName").textContent = user.displayName || "Operator";
-    document.getElementById("userEmail").textContent = user.email || "";
-    document.getElementById("userAvatar").textContent = (user.displayName || user.email || "O").charAt(0).toUpperCase();
+    const firstName = (user.displayName || (user.email || "").split("@")[0] || "Operator").trim().split(/\s+/)[0];
+    document.getElementById("userName").textContent = firstName;
     startDashboard();
   } else {
     dashboard.classList.add("hidden");
@@ -138,12 +138,15 @@ if (auth) onAuthStateChanged(auth, user => {
 // Dashboard preview data. Replace this generator with authenticated backend telemetry
 // before using the dashboard for actual field monitoring.
 let timer = null, records = [], paused = false, period = "second", chart = null;
+let scenarioTarget = 0, scenarioOffset = 0; // cm; dipakai tombol "Air naik" pada panel rob
 const canvas = document.getElementById("waterChart");
 const ctx = canvas.getContext("2d");
 function nowLabel() { return new Date().toLocaleString("id-ID", { timeZone:"Asia/Jakarta" }); }
 function sample() {
   const t = new Date();
-  const distance = +(48 + Math.sin(Date.now()/19000)*1.1 + (Math.random()-.5)*.5).toFixed(2);
+  // Skenario air naik/surut: offset bergerak 0,2 cm per detik menuju target
+  scenarioOffset = scenarioOffset < scenarioTarget ? Math.min(scenarioTarget, scenarioOffset + 0.2) : Math.max(scenarioTarget, scenarioOffset - 0.2);
+  const distance = +(48 + Math.sin(Date.now()/95000)*1.0 + (Math.random()-.5)*.5 - scenarioOffset).toFixed(2);
   const lat = -2.9900 + (Math.random()-.5)*0.0002;
   const lon = 104.7600 + (Math.random()-.5)*0.0002;
   return { timestamp:t.toISOString(), localTime:nowLabel(), distance_cm:distance, latitude:+lat.toFixed(6), longitude:+lon.toFixed(6), source:"SIMULATION" };
@@ -159,7 +162,7 @@ function addSample() {
   document.getElementById("gnssTime").textContent = new Date().toLocaleTimeString("id-ID");
   document.getElementById("recordCount").textContent = `${records.length} rekaman`;
   document.getElementById("chartCount").textContent = `${records.length} titik data`;
-  renderTable(); drawChart();
+  renderTable(); drawChart(); feedRob(r);
 }
 function renderTable() {
   const body = document.getElementById("historyBody");
@@ -326,11 +329,69 @@ function drawTideChart(rows = tideRows) {
 }
 /* ===================== AKHIR BAGIAN PASUT BIG ===================== */
 
+/* =====================================================================
+   INDIKATOR POTENSI BANJIR ROB  (NORMAL / WASPADA / SIAGA)
+   Mesin hitung : assets/rob.js     Parameter : assets/rob-config.json
+   ===================================================================== */
+let robEngine = null, robCfg = null;
+
+function robSetText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
+
+async function initRob() {
+  robCfg = await loadRobConfig();
+  robEngine = createRobEngine(robCfg);
+  const tag = document.getElementById("robCalTag");
+  if (tag) {
+    const ready = parametersReady(robCfg);
+    tag.textContent = !ready ? "BELUM DIKALIBRASI" : robCfg.terkalibrasi ? "TERKALIBRASI" : "PARAMETER CONTOH · BELUM DIKALIBRASI";
+    tag.className = "tag " + (robCfg.terkalibrasi && ready ? "ok" : "warning");
+  }
+}
+
+function feedRob(r) {
+  if (!robEngine) return;
+  const res = robEngine.push(new Date(r.timestamp).getTime(), r.distance_cm);
+  if (res) renderRob(res);
+}
+
+function renderRob(res) {
+  const active = res.status === "NORMAL" || res.status === "WASPADA" || res.status === "SIAGA" ? res.level : -1;
+  document.querySelectorAll(".rob-level").forEach(el => el.classList.toggle("active", Number(el.dataset.level) === active));
+  robSetText("robZ", res.z == null ? "-- m" : res.z.toFixed(2) + " m");
+  robSetText("robMargin", res.margin == null ? "-- cm" : (res.margin * 100).toFixed(0) + " cm" + (res.margin < 0 ? " (di atas ambang)" : ""));
+  robSetText("robRate", res.rate == null ? "-- m/jam" : (res.rate >= 0 ? "▲ " : "▼ ") + Math.abs(res.rate).toFixed(2) + " m/jam");
+  robSetText("robQuality", res.validCount + "/" + res.total + " sampel valid");
+  let note;
+  if (res.status === "BELUM DIKALIBRASI") note = "Parameter acuan dan ambang belum lengkap di assets/rob-config.json, sehingga status belum dapat ditentukan.";
+  else if (!res.ok) note = "Data tidak valid: " + res.reason + ". Status terakhir ditahan dan laju tidak dihitung.";
+  else {
+    const c = robCfg;
+    note = "Status " + res.status + " · ambang waspada ≤ " + (c.marginWaspadaM * 100).toFixed(0) + " cm, siaga ≤ " + (c.marginSiagaM * 100).toFixed(0) +
+      " cm dari ambang lokal." + (res.pendingUp ? " Menunggu konfirmasi naik status (" + res.pendingUp + "/" + c.nNaik + ")." : "") +
+      (res.pendingDown ? " Menunggu konfirmasi turun status (" + res.pendingDown + "/" + c.nTurun + ")." : "");
+  }
+  robSetText("robNote", note);
+}
+
+function setScenario(target) {
+  scenarioTarget = target;
+  document.getElementById("robRise")?.classList.toggle("on", target > 0);
+  document.getElementById("robFall")?.classList.toggle("on", target === 0);
+}
+document.getElementById("robRise")?.addEventListener("click", () => setScenario(18));
+document.getElementById("robFall")?.addEventListener("click", () => setScenario(0));
+/* ===================== AKHIR BAGIAN ROB ===================== */
+
+function tickClock() {
+  const el = document.getElementById("clock");
+  if (el) el.textContent = new Date().toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta" }) + " WIB";
+}
 function startDashboard() {
   if(timer) return;
-  document.getElementById("clock").textContent = new Date().toLocaleTimeString("id-ID",{timeZone:"Asia/Jakarta"})+" WIB";
-  document.getElementById("dateLabel").textContent = new Date().toLocaleDateString("id-ID",{timeZone:"Asia/Jakarta",weekday:"long",day:"numeric",month:"long",year:"numeric"});
-  addSample(); timer=setInterval(()=>{if(!paused){addSample();document.getElementById("clock").textContent=new Date().toLocaleTimeString("id-ID",{timeZone:"Asia/Jakarta"})+" WIB";}},1000);
+  tickClock();
+  addSample();
+  timer = setInterval(() => { tickClock(); if (!paused) addSample(); }, 1000);
+  if (!robEngine) initRob();
   // Muat referensi pasut BIG sekali saja, memakai posisi GNSS terakhir (simulasi)
   if (!tideLoaded) {
     const last = records[records.length - 1];
@@ -341,7 +402,7 @@ function startDashboard() {
 }
 function stopDashboard(){if(timer){clearInterval(timer);timer=null;}}
 document.getElementById("pauseSimulation").addEventListener("click", e=>{paused=!paused;e.currentTarget.textContent=paused?"▶ Lanjutkan simulasi":"Ⅱ Jeda simulasi";});
-document.getElementById("resetSimulation").addEventListener("click",()=>{records=[];addSample();});
+document.getElementById("resetSimulation").addEventListener("click",()=>{records=[];scenarioOffset=0;setScenario(0);if(robEngine)robEngine.reset();addSample();});
 document.querySelectorAll(".period").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".period").forEach(x=>x.classList.remove("active"));b.classList.add("active");period=b.dataset.period;drawChart();}));
 window.addEventListener("resize",()=>{if(!dashboard.classList.contains("hidden")){drawChart();drawTideChart();}});
 function download(name, content, type) {

@@ -57,7 +57,7 @@ Untuk Firebase Authentication, `localhost` harus terdaftar di Authorized domains
 - Grafik per jam/hari merangkum sampel yang tersedia pada sesi browser, bukan arsip historis sungguhan.
 - Ekspor CSV, TXT, GeoJSON tersedia; CSV dapat dibuka dengan Excel.
 - Belum ada integrasi ESP32, database cloud, atau penyimpanan historis. Untuk menerima telemetry perangkat diperlukan backend/API atau Firebase Realtime Database/Firestore beserta Authentication dan Security Rules.
-- Indikator banjir rob sengaja belum memberikan label aman/waspada/bahaya. Kalibrasi elevasi referensi, datum, ambang lokal dan validasi lapangan wajib dilakukan terlebih dahulu.
+- Indikator potensi banjir rob (NORMAL / WASPADA / SIAGA) dihitung oleh `assets/rob.js` dari parameter di `assets/rob-config.json`. Nilai bawaan hanyalah CONTOH untuk simulasi dan bertanda `terkalibrasi: false`. Elevasi acuan sensor, datum, ambang lokal, dan laju cepat wajib dikalibrasi dengan survei serta validasi lapangan sebelum status dipakai untuk keputusan.
 - NEO-M8N adalah GNSS standar, bukan receiver RTK centimeter-level.
 
 ## E. Jika login gagal
