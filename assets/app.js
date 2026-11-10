@@ -220,18 +220,27 @@ function haversine(lat1, lon1, lat2, lon2) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-// Membaca CSV pasut. Aman untuk CSV dari Excel Indonesia (titik koma / koma desimal) dan BOM UTF-8.
+// Zona waktu data CSV pasut. 7 = WIB. Ubah jadi 0 kalau data dari BIG ternyata UTC.
+const TIDE_UTC_OFFSET_HOURS = 7;
+
+// Membaca CSV pasut. Mendukung dua format:
+// 1) Lat,Lon,tanggal(M/D/YYYY),jam(H:MM:SS),z(m)  -> format CSV Muntok dari BIG
+// 2) waktu,tinggi                                  -> format sederhana 2 kolom
 function parseTideCsv(text) {
   const clean = text.replace(/^\uFEFF/, "").trim();
   const lines = clean.split(/\r?\n/).filter(l => l.trim() !== "");
   if (lines.length < 2) return [];
   const delimiter = lines[0].includes(";") ? ";" : ",";
   return lines.slice(1).map(line => {
-    const parts = line.split(delimiter);
-    const waktu = (parts[0] || "").trim().replace(/^"|"$/g, "");
-    let tinggi = (parts[1] || "").trim().replace(/^"|"$/g, "");
-    if (delimiter === ";") tinggi = tinggi.replace(",", ".");
-    return { t: new Date(waktu), h: parseFloat(tinggi) };
+    const p = line.split(delimiter).map(s => s.trim().replace(/^"|"$/g, ""));
+    if (p.length >= 5) {
+      const [mo, d, y] = p[2].split("/").map(Number);
+      const [hh, mi, ss] = p[3].split(":").map(Number);
+      const t = new Date(Date.UTC(y, mo - 1, d, hh, mi, ss || 0) - TIDE_UTC_OFFSET_HOURS * 3600000);
+      return { t, h: parseFloat(p[4].replace(",", ".")) };
+    }
+    const h = parseFloat((p[1] || "").replace(",", "."));
+    return { t: new Date(p[0]), h };
   }).filter(r => !isNaN(r.t.getTime()) && Number.isFinite(r.h));
 }
 
