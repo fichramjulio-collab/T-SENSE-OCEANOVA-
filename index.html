@@ -4,6 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#071d2b">
   <title>T-SENSE by OCEANOVA | Coastal Monitoring</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -93,10 +94,31 @@
         <div class="gnss-grid">
           <div class="coord-card"><span>LATITUDE</span><b id="latitude">-2.9900°</b></div><div class="coord-card"><span>LONGITUDE</span><b id="longitude">104.7600°</b></div><div class="coord-card"><span>GNSS FIX</span><b id="fixStatus">DEMO FIX</b></div><div class="coord-card"><span>UPDATE</span><b id="gnssTime">--:--:--</b></div>
         </div>
-        <div class="map-placeholder"><div class="map-grid"></div><div class="map-pin">◎</div><div class="map-caption"><b>Lokasi stasiun T-SENSE</b><span>Koordinat ilustratif · bukan posisi perangkat aktual</span></div></div>
+        <div class="map-wrap">
+          <div id="map" class="map-live" aria-label="Peta posisi stasiun T-SENSE"></div>
+          <div class="map-tools"><button id="mapCenter" class="btn outline" type="button">◎ Pusatkan</button><button id="mapFit" class="btn outline" type="button">⤢ Lihat semua titik</button></div>
+        </div>
+        <div class="map-legend"><span><i class="map-dot tsense"></i> T-SENSE-001 (koordinat simulasi)</span><span><i class="map-dot tide"></i> Stasiun pasut BIG</span><span class="muted">Zoom: tombol +/− atau cubit layar · klik peta lalu scroll untuk zoom</span></div>
       </section>
       <section class="panel" id="water">
         <div class="panel-heading"><div><div class="eyebrow">A01NYUB ULTRASONIC SENSOR</div><h2>Sea water level monitoring</h2><p class="muted">Jarak sensor ke permukaan air · satuan cm</p></div><div class="segmented" role="group"><button class="period active" data-period="second">Per detik</button><button class="period" data-period="hour">Per jam</button><button class="period" data-period="day">Per hari</button></div></div>
+        <div class="wv-card">
+          <div class="wv-head"><div><b>Jarak sensor ke air</b><small>Ultrasonic A01NYUB · satuan cm</small></div><span class="tag">A01NYUB</span></div>
+          <div class="wv-big"><strong id="wvValue">--</strong><small>cm</small></div>
+          <div class="wv-delta" id="wvDelta">Menunggu pembacaan…</div>
+          <div class="water-visual" role="img" aria-label="Ilustrasi jarak sensor ke permukaan air">
+            <span class="wv-sensor"></span>
+            <span class="wv-tag sensor">SENSOR</span>
+            <div class="wv-line" id="wvLine"><span class="wv-dist" id="wvDist">-- cm</span></div>
+            <div class="wv-water" id="wvWater">
+              <svg class="wv-wave back" viewBox="0 0 1200 28" preserveAspectRatio="none" aria-hidden="true"><path d="M0 14 Q75 0 150 14 T300 14 T450 14 T600 14 T750 14 T900 14 T1050 14 T1200 14 V28 H0 Z"/></svg>
+              <svg class="wv-wave front" viewBox="0 0 1200 28" preserveAspectRatio="none" aria-hidden="true"><path d="M0 14 Q75 28 150 14 T300 14 T450 14 T600 14 T750 14 T900 14 T1050 14 T1200 14 V28 H0 Z"/></svg>
+              <div class="wv-body"><i class="wv-bubble" style="left:12%;animation-delay:0s"></i><i class="wv-bubble" style="left:31%;animation-delay:1.8s"></i><i class="wv-bubble" style="left:57%;animation-delay:.9s"></i><i class="wv-bubble" style="left:78%;animation-delay:2.6s"></i><i class="wv-bubble" style="left:91%;animation-delay:3.4s"></i></div>
+            </div>
+            <span class="wv-tag surface">WATER SURFACE</span>
+          </div>
+          <div class="wv-foot"><span>● Pembacaan contoh</span><span>Interval tampilan: 1 detik</span></div>
+        </div>
         <div class="chart-summary"><div><span class="muted">PEMBACAAN TERKINI</span><b id="latestReading">-- cm</b></div><div><span class="muted">RENTANG DATA</span><b id="chartRange">60 detik terakhir</b></div><div><span class="muted">FREKUENSI SIMULASI</span><b>1 detik</b></div></div>
         <div class="chart-wrap"><canvas id="waterChart" aria-label="Grafik pembacaan jarak sensor"></canvas></div>
         <div class="chart-legend"><span><i></i> Jarak sensor ke air (simulasi)</span><span id="chartCount">0 titik data</span></div>
@@ -161,5 +183,6 @@
       <footer class="footer-brand"><div class="footer-logo">T-SENSE</div><b>by OCEANOVA</b><p>Coastal Monitoring & Early Indication System</p><small>Prototype dashboard · Data simulasi bukan data observasi resmi</small></footer>
     </main>
   </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script type="module" src="assets/app.js"></script>
 </body></html>

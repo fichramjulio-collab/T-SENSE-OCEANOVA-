@@ -162,7 +162,7 @@ function addSample() {
   document.getElementById("gnssTime").textContent = new Date().toLocaleTimeString("id-ID");
   document.getElementById("recordCount").textContent = `${records.length} rekaman`;
   document.getElementById("chartCount").textContent = `${records.length} titik data`;
-  renderTable(); drawChart(); feedRob(r);
+  updateMap(r.latitude, r.longitude); renderWater(r); renderTable(); drawChart(); feedRob(r);
 }
 function renderTable() {
   const body = document.getElementById("historyBody");
@@ -268,6 +268,7 @@ async function loadTideReference(myLat, myLon) {
     setTideText("tideDistance", nearest.dist.toFixed(1) + " km");
     setTideText("tideDatum", nearest.datum || "BELUM DIKETAHUI");
     setTideText("tideSourceTag", nearest.source || "BIG");
+    showTideOnMap(nearest);
 
     const csvRes = await fetch(nearest.dataFile, { cache: "no-store" });
     if (!csvRes.ok) throw new Error("File CSV pasut tidak ditemukan (" + csvRes.status + ")");
@@ -330,6 +331,80 @@ function drawTideChart(rows = tideRows) {
 /* ===================== AKHIR BAGIAN PASUT BIG ===================== */
 
 /* =====================================================================
+   PETA INTERAKTIF (Leaflet + OpenStreetMap) dan VISUAL AIR
+   ===================================================================== */
+let map = null, tsenseMarker = null, tideMarker = null;
+
+function mapIcon(kind) {
+  return L.divIcon({ className: "", html: '<span class="map-dot ' + kind + '"></span>', iconSize: [22, 22], iconAnchor: [11, 11] });
+}
+
+function initMap(lat, lon) {
+  const el = document.getElementById("map");
+  if (!el || map) return;
+  if (typeof L === "undefined") {
+    el.innerHTML = '<div class="map-fallback">Peta tidak dapat dimuat. Periksa koneksi internet lalu muat ulang halaman.</div>';
+    return;
+  }
+  map = L.map(el, { zoomControl: true }).setView([lat, lon], 15);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+  L.control.scale({ imperial: false }).addTo(map);
+  tsenseMarker = L.marker([lat, lon], { icon: mapIcon("tsense"), title: "T-SENSE-001" })
+    .addTo(map).bindTooltip("T-SENSE-001 · koordinat simulasi");
+  // Scroll halaman tidak terganggu: zoom dengan roda mouse aktif setelah peta diklik
+  map.scrollWheelZoom.disable();
+  map.on("click", () => map.scrollWheelZoom.enable());
+  map.on("mouseout", () => map.scrollWheelZoom.disable());
+  setTimeout(() => map.invalidateSize(), 250);
+}
+
+function updateMap(lat, lon) {
+  if (map && tsenseMarker) tsenseMarker.setLatLng([lat, lon]);
+}
+
+function showTideOnMap(st) {
+  if (!map || tideMarker) return;
+  tideMarker = L.marker([st.lat, st.lon], { icon: mapIcon("tide"), title: st.name })
+    .addTo(map).bindTooltip(st.name + " · stasiun pasut BIG");
+}
+
+function centerMap() {
+  if (map && tsenseMarker) map.setView(tsenseMarker.getLatLng(), Math.max(map.getZoom(), 15));
+}
+function fitMapAll() {
+  if (!map || !tsenseMarker) return;
+  if (!tideMarker) return centerMap();
+  map.fitBounds(L.latLngBounds([tsenseMarker.getLatLng(), tideMarker.getLatLng()]).pad(0.3));
+}
+document.getElementById("mapCenter")?.addEventListener("click", centerMap);
+document.getElementById("mapFit")?.addEventListener("click", fitMapAll);
+
+// Visual air: makin besar jarak sensor ke air, makin turun permukaan air.
+const WV = { top: 60, bottom: 190, dLo: 20, dHi: 70 }; // px posisi permukaan air dan rentang cm yang digambar
+function renderWater(r) {
+  const water = document.getElementById("wvWater");
+  if (!water) return;
+  const frac = Math.min(1, Math.max(0, (r.distance_cm - WV.dLo) / (WV.dHi - WV.dLo)));
+  const y = Math.round(WV.top + frac * (WV.bottom - WV.top));
+  water.style.top = y + "px";
+  const line = document.getElementById("wvLine");
+  if (line) line.style.height = Math.max(0, y - 44) + "px";
+  const txt = r.distance_cm.toFixed(1);
+  const dist = document.getElementById("wvDist"); if (dist) dist.textContent = txt + " cm";
+  const val = document.getElementById("wvValue"); if (val) val.textContent = txt;
+  const change = r.distance_cm - records[0].distance_cm;
+  const delta = document.getElementById("wvDelta");
+  if (delta) {
+    const sign = change > 0 ? "+" : change < 0 ? "\u2212" : "";
+    delta.innerHTML = "<b>" + (change > 0 ? "\u2197" : "\u2198") + " " + sign + Math.abs(change).toFixed(1) + " cm</b> perubahan dari awal simulasi";
+  }
+}
+/* ===================== AKHIR BAGIAN PETA & AIR ===================== */
+
+/* =====================================================================
    INDIKATOR POTENSI BANJIR ROB  (NORMAL / WASPADA / SIAGA)
    Mesin hitung : assets/rob.js     Parameter : assets/rob-config.json
    ===================================================================== */
@@ -390,6 +465,7 @@ function startDashboard() {
   if(timer) return;
   tickClock();
   addSample();
+  { const first = records[records.length - 1]; initMap(first.latitude, first.longitude); }
   timer = setInterval(() => { tickClock(); if (!paused) addSample(); }, 1000);
   if (!robEngine) initRob();
   // Muat referensi pasut BIG sekali saja, memakai posisi GNSS terakhir (simulasi)
@@ -404,7 +480,7 @@ function stopDashboard(){if(timer){clearInterval(timer);timer=null;}}
 document.getElementById("pauseSimulation").addEventListener("click", e=>{paused=!paused;e.currentTarget.textContent=paused?"▶ Lanjutkan simulasi":"Ⅱ Jeda simulasi";});
 document.getElementById("resetSimulation").addEventListener("click",()=>{records=[];scenarioOffset=0;setScenario(0);if(robEngine)robEngine.reset();addSample();});
 document.querySelectorAll(".period").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".period").forEach(x=>x.classList.remove("active"));b.classList.add("active");period=b.dataset.period;drawChart();}));
-window.addEventListener("resize",()=>{if(!dashboard.classList.contains("hidden")){drawChart();drawTideChart();}});
+window.addEventListener("resize",()=>{if(!dashboard.classList.contains("hidden")){drawChart();drawTideChart();if(map)map.invalidateSize();}});
 function download(name, content, type) {
   const blob=new Blob([content],{type}), url=URL.createObjectURL(blob), a=document.createElement("a");
   a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
