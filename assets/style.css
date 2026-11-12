@@ -89,3 +89,55 @@
 .wv-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:10px;color:#85969e;margin-top:14px}
 @media(prefers-reduced-motion:reduce){.wv-wave,.wv-bubble{animation:none}.wv-line,.wv-water{transition:none}}
 @media(max-width:700px){.map-live{height:280px}.map-tools{flex-direction:column;align-items:flex-end}.wv-card{padding:16px}}
+
+/* ===== Logo gambar ===== */
+.side-brand{padding:0 6px 30px}.side-brand img{display:block;width:176px;height:auto}
+.auth-logo{margin:26px 0 8px;line-height:0}.auth-logo img{width:min(400px,92%);height:auto}
+.mobile-logo{display:none}
+.nav-sep{margin-top:14px;padding-top:6px}
+/* ===== Profil & avatar animasi ===== */
+.profile-chip{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #dce6e9;border-radius:30px;padding:4px 12px 4px 4px;cursor:pointer;color:#405966}
+.profile-chip:hover{border-color:var(--teal)}.profile-chip b{font-size:11px}
+.avatar-sm{width:30px;height:30px;border-radius:50%;overflow:hidden;display:inline-block}
+.prof-grid{display:grid;grid-template-columns:320px 1fr;gap:24px;align-items:start}
+.prof-card{border:1px solid var(--line);border-radius:14px;padding:22px;text-align:center;background:#f9fbfb}
+.prof-card>b{display:block;font-size:18px}.prof-card>small{display:block;font-size:11px;color:var(--muted);margin-top:4px}
+.prof-card .auth-form{text-align:left;margin:18px 0 6px}
+.prof-avatar{width:132px;height:132px;margin:0 auto 14px;border-radius:50%;overflow:hidden;border:3px solid #fff;box-shadow:0 8px 24px #0b3a4430}
+.prof-actions{display:grid;gap:8px;margin-top:14px}.prof-actions .btn{font-size:11px}
+.avatar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:14px;margin-top:12px}
+.avatar-opt{border:2px solid var(--line);background:#fff;border-radius:14px;padding:12px 8px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:#405966}
+.avatar-opt:hover{border-color:#9fd6da}
+.avatar-opt[aria-checked="true"]{border-color:var(--teal);box-shadow:0 0 0 3px #159eae22}
+.av-wrap{display:block;width:72px;height:72px;margin:0 auto 8px;border-radius:50%;overflow:hidden}
+.av{display:block;width:100%;height:100%}
+.av *{transform-box:fill-box;transform-origin:center}
+.av .a-tent{transform-origin:50% 0}.av .a-tail{transform-origin:0 50%}
+@keyframes avSlide{to{transform:translateX(50px)}}
+@keyframes avBob{50%{transform:translateY(-4px)}}
+@keyframes avTwk{50%{transform:scale(1.18) rotate(18deg)}}
+@keyframes avBlink{50%{opacity:.12}}
+@keyframes avPulse{50%{transform:scale(1.12,.86)}}
+@keyframes avSway{50%{transform:rotate(8deg)}}
+@keyframes avPing{from{transform:scale(1);opacity:.9}to{transform:scale(5.5);opacity:0}}
+@keyframes avRise{from{transform:translateY(0);opacity:0}30%{opacity:.8}to{transform:translateY(-34px);opacity:0}}
+@keyframes avTail{50%{transform:rotate(-16deg)}}
+@keyframes avSwim{50%{transform:translateX(7px)}}
+@keyframes avSpout{0%,100%{opacity:0;transform:translateY(6px)}50%{opacity:1;transform:translateY(-3px)}}
+.a-wave{animation:avSlide 4s linear infinite}.a-wave2{animation:avSlide 2.6s linear infinite}
+.a-bob{animation:avBob 3s ease-in-out infinite}.a-twk{animation:avTwk 3.2s ease-in-out infinite}
+.a-b1{animation:avBlink 2.4s infinite}.a-b2{animation:avBlink 3.1s .8s infinite}
+.a-bell{animation:avPulse 2.2s ease-in-out infinite}.a-tent{animation:avSway 2.2s ease-in-out infinite}
+.a-ping{animation:avPing 3s ease-out infinite}.a-rise{animation:avRise 3s ease-in infinite}
+.a-tail{animation:avTail .9s ease-in-out infinite}.a-swim{animation:avSwim 3s ease-in-out infinite}
+.a-spout{animation:avSpout 3.4s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.av *{animation:none!important}}
+@media(max-width:900px){.prof-grid{grid-template-columns:1fr}}
+@media(max-width:700px){
+.sidebar{position:sticky;top:0;z-index:20}
+.side-brand{padding:0 0 10px}.side-brand img{width:140px}
+.sidebar nav{display:flex;overflow-x:auto;gap:6px;padding-bottom:4px}
+.nav-item{white-space:nowrap;flex:0 0 auto}.nav-sep{display:none}
+.mobile-logo{display:block;width:210px;height:auto;margin-bottom:30px}
+.profile-chip b{display:none}.profile-chip{padding:4px}
+}

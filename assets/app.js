@@ -125,8 +125,7 @@ if (auth) onAuthStateChanged(auth, user => {
   if (user) {
     authScreen.classList.add("hidden");
     dashboard.classList.remove("hidden");
-    const firstName = (user.displayName || (user.email || "").split("@")[0] || "Operator").trim().split(/\s+/)[0];
-    document.getElementById("userName").textContent = firstName;
+    applyProfile(user);
     startDashboard();
   } else {
     dashboard.classList.add("hidden");
@@ -188,6 +187,7 @@ function aggregate() {
 }
 function drawChart() {
   const rect=canvas.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+  if(!rect.width) return; // halaman sedang tersembunyi
   canvas.width=Math.max(300,rect.width*dpr); canvas.height=250*dpr;
   ctx.setTransform(dpr,0,0,dpr,0,0);
   const w=rect.width,h=250,pad={l:42,r:16,t:18,b:34};
@@ -333,13 +333,15 @@ function drawTideChart(rows = tideRows) {
 /* =====================================================================
    PETA INTERAKTIF (Leaflet + OpenStreetMap) dan VISUAL AIR
    ===================================================================== */
-let map = null, tsenseMarker = null, tideMarker = null;
+let map = null, tsenseMarker = null, tideMarker = null, pendingTide = null;
 
 function mapIcon(kind) {
   return L.divIcon({ className: "", html: '<span class="map-dot ' + kind + '"></span>', iconSize: [22, 22], iconAnchor: [11, 11] });
 }
 
-function initMap(lat, lon) {
+function initMap() {
+  const last = records[records.length - 1];
+  const lat = last ? last.latitude : -2.99, lon = last ? last.longitude : 104.76;
   const el = document.getElementById("map");
   if (!el || map) return;
   if (typeof L === "undefined") {
@@ -359,6 +361,7 @@ function initMap(lat, lon) {
   map.on("click", () => map.scrollWheelZoom.enable());
   map.on("mouseout", () => map.scrollWheelZoom.disable());
   setTimeout(() => map.invalidateSize(), 250);
+  if (pendingTide) showTideOnMap(pendingTide);
 }
 
 function updateMap(lat, lon) {
@@ -366,7 +369,8 @@ function updateMap(lat, lon) {
 }
 
 function showTideOnMap(st) {
-  if (!map || tideMarker) return;
+  if (!map) { pendingTide = st; return; }
+  if (tideMarker) return;
   tideMarker = L.marker([st.lat, st.lon], { icon: mapIcon("tide"), title: st.name })
     .addTo(map).bindTooltip(st.name + " · stasiun pasut BIG");
 }
@@ -457,6 +461,84 @@ document.getElementById("robRise")?.addEventListener("click", () => setScenario(
 document.getElementById("robFall")?.addEventListener("click", () => setScenario(0));
 /* ===================== AKHIR BAGIAN ROB ===================== */
 
+const AVATARS = [
+  { id: "gelombang", name: "Gelombang", svg: "<svg class=\"av\" viewBox=\"0 0 100 100\" role=\"img\" aria-label=\"Gelombang\"><rect width=\"100\" height=\"100\" fill=\"#0d3041\"/><circle class=\"a-bob\" cx=\"72\" cy=\"28\" r=\"9\" fill=\"#C9A96E\"/><g class=\"a-wave\"><path d=\"M-100 60q25-12 50 0t50 0 50 0 50 0V100h-200z\" fill=\"#53c7ce\" opacity=\".55\"/></g><g class=\"a-wave2\"><path d=\"M-100 70q25-12 50 0t50 0 50 0 50 0V100h-200z\" fill=\"#159eae\"/></g></svg>" },
+  { id: "nova", name: "Nova", svg: "<svg class=\"av\" viewBox=\"0 0 100 100\" role=\"img\" aria-label=\"Nova\"><rect width=\"100\" height=\"100\" fill=\"#071d2b\"/><circle class=\"a-b1\" cx=\"22\" cy=\"26\" r=\"2\" fill=\"#f4f8f9\"/><circle class=\"a-b2\" cx=\"78\" cy=\"72\" r=\"2\" fill=\"#f4f8f9\"/><circle class=\"a-b1\" style=\"animation-delay:1s\" cx=\"80\" cy=\"22\" r=\"1.5\" fill=\"#53c7ce\"/><circle class=\"a-b2\" cx=\"24\" cy=\"76\" r=\"1.5\" fill=\"#53c7ce\"/><g class=\"a-twk\"><path d=\"M50 16l7 27 27 7-27 7-7 27-7-27-27-7 27-7z\" fill=\"#C9A96E\"/></g></svg>" },
+  { id: "ubur", name: "Ubur-ubur", svg: "<svg class=\"av\" viewBox=\"0 0 100 100\" role=\"img\" aria-label=\"Ubur-ubur\"><rect width=\"100\" height=\"100\" fill=\"#12344a\"/><g class=\"a-bob\"><g class=\"a-bell\"><path d=\"M27 52a23 23 0 0 1 46 0z\" fill=\"#53c7ce\"/><circle cx=\"42\" cy=\"40\" r=\"3\" fill=\"#fff\" opacity=\".5\"/></g><g fill=\"none\" stroke=\"#a8e6e2\" stroke-width=\"3\" stroke-linecap=\"round\"><path class=\"a-tent\" d=\"M35 55q-5 10 0 20\"/><path class=\"a-tent\" style=\"animation-delay:.3s\" d=\"M45 55q5 10 0 24\"/><path class=\"a-tent\" style=\"animation-delay:.6s\" d=\"M55 55q-5 10 0 24\"/><path class=\"a-tent\" style=\"animation-delay:.9s\" d=\"M65 55q5 10 0 20\"/></g></g></svg>" },
+  { id: "paus", name: "Paus", svg: "<svg class=\"av\" viewBox=\"0 0 100 100\" role=\"img\" aria-label=\"Paus\"><rect width=\"100\" height=\"100\" fill=\"#0d3041\"/><g class=\"a-spout\"><path d=\"M45 36V22M39 28l6-6 6 6\" stroke=\"#f4f8f9\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"/></g><g class=\"a-bob\"><ellipse cx=\"46\" cy=\"58\" rx=\"30\" ry=\"18\" fill=\"#53c7ce\"/><path d=\"M72 56l17-15v32z\" fill=\"#53c7ce\"/><path d=\"M20 64q26 14 54 0\" stroke=\"#a8e6e2\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\"/><circle cx=\"31\" cy=\"54\" r=\"2.5\" fill=\"#071d2b\"/></g><path d=\"M0 80q12-8 25 0t25 0 25 0 25 0V100H0z\" fill=\"#159eae\"/></svg>" },
+  { id: "sonar", name: "Sonar", svg: "<svg class=\"av\" viewBox=\"0 0 100 100\" role=\"img\" aria-label=\"Sonar\"><rect width=\"100\" height=\"100\" fill=\"#071d2b\"/><circle class=\"a-ping\" cx=\"50\" cy=\"50\" r=\"7\" fill=\"none\" stroke=\"#53c7ce\" stroke-width=\"2\"/><circle class=\"a-ping\" style=\"animation-delay:1s\" cx=\"50\" cy=\"50\" r=\"7\" fill=\"none\" stroke=\"#53c7ce\" stroke-width=\"2\"/><circle class=\"a-ping\" style=\"animation-delay:2s\" cx=\"50\" cy=\"50\" r=\"7\" fill=\"none\" stroke=\"#53c7ce\" stroke-width=\"2\"/><circle cx=\"50\" cy=\"50\" r=\"7\" fill=\"#C9A96E\"/></svg>" },
+  { id: "mercusuar", name: "Mercusuar", svg: "<svg class=\"av\" viewBox=\"0 0 100 100\" role=\"img\" aria-label=\"Mercusuar\"><rect width=\"100\" height=\"100\" fill=\"#0d3041\"/><path class=\"a-b1\" d=\"M50 34L100 20V46z\" fill=\"#C9A96E\" opacity=\".4\"/><path class=\"a-b2\" d=\"M50 34L0 20V46z\" fill=\"#C9A96E\" opacity=\".4\"/><path d=\"M42 86l4-44h8l4 44z\" fill=\"#f4f8f9\"/><path d=\"M44.5 62h11l.8 9H43.7z\" fill=\"#d6453d\"/><rect x=\"45\" y=\"32\" width=\"10\" height=\"10\" rx=\"2\" fill=\"#C9A96E\"/><path d=\"M43 33l7-9 7 9z\" fill=\"#53c7ce\"/><path d=\"M0 84q12-6 25 0t25 0 25 0 25 0V100H0z\" fill=\"#159eae\"/></svg>" },
+  { id: "ikan", name: "Ikan", svg: "<svg class=\"av\" viewBox=\"0 0 100 100\" role=\"img\" aria-label=\"Ikan\"><rect width=\"100\" height=\"100\" fill=\"#12344a\"/><circle class=\"a-rise\" cx=\"70\" cy=\"62\" r=\"2.5\" fill=\"#fff\" opacity=\".6\"/><circle class=\"a-rise\" style=\"animation-delay:1.2s\" cx=\"62\" cy=\"70\" r=\"2\" fill=\"#fff\" opacity=\".6\"/><g class=\"a-swim\"><ellipse cx=\"46\" cy=\"50\" rx=\"21\" ry=\"13\" fill=\"#C9A96E\"/><path class=\"a-tail\" d=\"M64 50l17-13v26z\" fill=\"#C9A96E\"/><path d=\"M40 38q6-8 14 0z\" fill=\"#b39358\"/><circle cx=\"35\" cy=\"47\" r=\"2.6\" fill=\"#071d2b\"/></g></svg>" }
+];
+const store = {
+  get: k => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} }
+};
+const avatarKey = u => "tsense:avatar:" + (u && u.uid ? u.uid : "anon");
+const avatarSvg = id => (AVATARS.find(x => x.id === id) || AVATARS[0]).svg;
+let currentUser = null, currentAvatar = AVATARS[0].id;
+
+/* =====================================================================
+   NAVIGASI HALAMAN (sidebar) dan PROFIL AKUN
+   ===================================================================== */
+const PAGES = ["overview", "gnss", "water", "tide", "risk", "diagnostics", "data", "profile"];
+function showPage(name, push = true) {
+  if (!PAGES.includes(name)) name = "overview";
+  document.querySelectorAll("[data-page]").forEach(el => el.classList.toggle("hidden", el.dataset.page !== name));
+  document.querySelectorAll(".nav-item[data-view]").forEach(n => n.classList.toggle("active", n.dataset.view === name));
+  if (push && location.hash !== "#" + name) history.pushState(null, "", "#" + name);
+  window.scrollTo(0, 0);
+  requestAnimationFrame(() => {
+    if (name === "water") drawChart();
+    if (name === "tide") drawTideChart();
+    if (name === "gnss") { initMap(); if (map) map.invalidateSize(); }
+  });
+}
+document.querySelectorAll(".nav-item[data-view]").forEach(n => n.addEventListener("click", e => { e.preventDefault(); showPage(n.dataset.view); }));
+window.addEventListener("popstate", () => showPage(location.hash.slice(1), false));
+document.getElementById("profileChip")?.addEventListener("click", () => showPage("profile"));
+
+function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
+function applyAvatar(id) {
+  currentAvatar = id;
+  const svg = avatarSvg(id);
+  ["chipAvatar", "profAvatar"].forEach(t => { const el = document.getElementById(t); if (el) el.innerHTML = svg; });
+  document.querySelectorAll(".avatar-opt").forEach(b => b.setAttribute("aria-checked", String(b.dataset.av === id)));
+}
+function applyProfile(user) {
+  currentUser = user;
+  const name = (user.displayName || (user.email || "").split("@")[0] || "Operator").trim();
+  const first = name.split(/\s+/)[0];
+  setText("userName", first); setText("chipName", first); setText("profName", name); setText("profEmail", user.email || "");
+  setText("profVerified", user.emailVerified ? "EMAIL TERVERIFIKASI" : "EMAIL BELUM TERVERIFIKASI");
+  const input = document.getElementById("profNameInput"); if (input) input.value = name;
+  const grid = document.getElementById("avatarGrid");
+  if (grid) grid.innerHTML = AVATARS.map(a => '<button type="button" class="avatar-opt" role="radio" aria-checked="false" data-av="' + a.id + '"><span class="av-wrap">' + a.svg + '</span>' + a.name + '</button>').join("");
+  applyAvatar(store.get(avatarKey(user)) || AVATARS[0].id);
+}
+document.getElementById("avatarGrid")?.addEventListener("click", e => {
+  const b = e.target.closest(".avatar-opt");
+  if (!b || !currentUser) return;
+  store.set(avatarKey(currentUser), b.dataset.av);
+  applyAvatar(b.dataset.av);
+});
+function profMessage(text, type) { const el = document.getElementById("profMsg"); if (el) { el.textContent = text; el.className = "message " + type; } }
+document.getElementById("profileForm")?.addEventListener("submit", async e => {
+  e.preventDefault();
+  const u = auth && auth.currentUser; if (!u) return;
+  const name = document.getElementById("profNameInput").value.trim();
+  if (!name) return profMessage("Nama tidak boleh kosong.", "error");
+  try { await updateProfile(u, { displayName: name }); applyProfile(u); profMessage("Nama berhasil disimpan.", "success"); }
+  catch (err) { profMessage(friendlyError(err), "error"); }
+});
+document.getElementById("profReset")?.addEventListener("click", async () => {
+  const u = auth && auth.currentUser; if (!u || !u.email) return;
+  try { await sendPasswordResetEmail(auth, u.email); profMessage("Tautan ganti password dikirim ke " + u.email + ".", "success"); }
+  catch (err) { profMessage(friendlyError(err), "error"); }
+});
+document.getElementById("profLogout")?.addEventListener("click", () => { if (auth) signOut(auth); });
+/* ===================== AKHIR BAGIAN NAVIGASI & PROFIL ===================== */
+
 function tickClock() {
   const el = document.getElementById("clock");
   if (el) el.textContent = new Date().toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta" }) + " WIB";
@@ -465,7 +547,7 @@ function startDashboard() {
   if(timer) return;
   tickClock();
   addSample();
-  { const first = records[records.length - 1]; initMap(first.latitude, first.longitude); }
+  showPage(location.hash.slice(1), false);
   timer = setInterval(() => { tickClock(); if (!paused) addSample(); }, 1000);
   if (!robEngine) initRob();
   // Muat referensi pasut BIG sekali saja, memakai posisi GNSS terakhir (simulasi)
